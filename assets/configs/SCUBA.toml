@@ -1,0 +1,15 @@
+backgrounds = [
+  "../water/bg.png"
+]
+
+[objects]
+
+scuba = [
+  "../water/scuba.png"
+]
+
+fish = [
+  "../water/Fish.png"
+]
+
+[options]

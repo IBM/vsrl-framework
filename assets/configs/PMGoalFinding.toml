@@ -1,0 +1,19 @@
+backgrounds = [
+  "../top/bg.png"
+]
+
+[objects]
+
+blue = [
+  "../top/blue.png"
+]
+
+goal = [
+  "../top/goal.png"
+]
+
+hazard = [
+  "../top/hazard.png"
+]
+
+[options]

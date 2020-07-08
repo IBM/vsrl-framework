@@ -1,0 +1,15 @@
+backgrounds = [
+  "../lateral/bg.png"
+]
+
+[objects]
+
+red = [
+  "../lateral/red.png"
+]
+
+blue = [
+  "../lateral/blue.png"
+]
+
+[options]

@@ -1,0 +1,26 @@
+name: vsrl
+channels:
+- pytorch
+dependencies:
+- python=3.7
+- ipykernel
+- pytorch
+- torchvision
+- cudatoolkit=10.1
+- numpy
+- scipy
+- pip
+- pip:
+  - auto-argparse
+  - comet-ml
+  - matplotlib
+  - opencv-python-headless
+  - parsimonious
+  - pillow
+  - portion
+  - psutil
+  - pytorch-lightning
+  - "git+https://github.com/astooke/rlpyt"
+  - toml
+  - tqdm
+  - z3-solver
