@@ -7,7 +7,7 @@
 
 from pathlib import Path
 
-VSRL_WEBSITE = "http://safelearning.ai/vsrl/"
+VSRL_WEBSITE = "https://raw.githubusercontent.com/IBM/vsrl-framework/master"
 
 VSRL_PATH = Path.home() / ".vsrl"
 VSRL_PATH.mkdir(exist_ok=True)
