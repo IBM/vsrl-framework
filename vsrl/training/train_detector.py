@@ -23,7 +23,7 @@ def train_center_track(
     max_epochs: int = 2_000,
     epoch_size: int = 5_000,
     batch_size: int = 32,
-    n_workers: int = 4,
+    n_workers: int = 6,
     img_scale: int = 1,
     label_scale: int = 4,
     grayscale: bool = False,
@@ -57,10 +57,10 @@ def train_center_track(
     config_path = Path(config_path)
 
     model = CenterTrack(
-        model_type,
-        config_path,
-        epoch_size,
-        batch_size,
+        model=model_type,
+        config_path=config_path,
+        epoch_size=epoch_size,
+        batch_size=batch_size,
         n_workers=n_workers,
         img_scale=img_scale,
         label_scale=label_scale,
