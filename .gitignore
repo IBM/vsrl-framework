@@ -1,0 +1,13 @@
+.idea/*
+__pycache__
+*.egg-info
+venv/
+build/
+dist/
+.vscode
+.ipynb_checkpoints
+.mypy_cache
+sketch_code_gen.jar
+notebooks
+nbs
+.coverage
