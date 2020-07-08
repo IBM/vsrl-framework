@@ -41,7 +41,7 @@ def _download_assets(force_reload: bool = False) -> None:
         shutil.rmtree(img_dir)
     if not img_dir.exists():
         img_dir.mkdir(exist_ok=True, parents=True)
-        data = urllib.request.urlopen(VSRL_WEBSITE + "assets/assets.zip").read()
+        data = urllib.request.urlopen(VSRL_WEBSITE + "/assets/assets.zip").read()
         assets_zip_loc = img_dir / "assets.zip"
         assets_zip_loc.write_bytes(data)
         assert zipfile.is_zipfile(assets_zip_loc)
