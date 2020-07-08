@@ -145,7 +145,7 @@ class Pointmesses(Env):
         self._pointer = Image.open(get_image_path("pointer.png"))
         self._egoimg = Image.open(get_image_path("top/blue.png"))
         self._hazardimg = Image.open(get_image_path("top/hazard.png"))
-        self._goalimg = Image.open(get_image_path("top/goalv2.png"))
+        self._goalimg = Image.open(get_image_path("top/goal.png"))
         self._pointmessimg = Image.open(get_image_path("top/pointmess.png"))
         scene = Image.open(get_image_path("top/bg.png"))
         img_names = ["_egoimg", "_hazardimg", "_goalimg", "_pointmessimg", "_scene"]

@@ -145,7 +145,7 @@ class PMGoalFinding(Env):
         self._pointer = Image.open(get_image_path("pointer.png"))  # for debugging.
         self._egoimg = Image.open(get_image_path("top/blue.png"))
         self._hazardimg = Image.open(get_image_path("top/hazard.png"))
-        self._goalimg = Image.open(get_image_path("top/goalv2.png"))
+        self._goalimg = Image.open(get_image_path("top/goal.png"))
         img_names = ["_egoimg", "_hazardimg", "_goalimg", "_scene"]
 
         self.map_buffer = 12
