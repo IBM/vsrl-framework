@@ -156,4 +156,4 @@ See license.txt for details.
 ## Contact
 
  * [Issue Tracker](https://github.com/IBM/vsrl-framework/issues)
- * [Slack Channel](verifiablysaf-ost4334.slack.com)
+ * [Slack Channel](https://verifiablysaf-ost4334.slack.com)
