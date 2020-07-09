@@ -1,6 +1,6 @@
 # IBM Verifiably Safe Reinforcement Learning framework
 
-This repository contains implementions of Verifiably Safe Reinforcement Learning (VSRL) algorthms.
+This repository contains implementions of Verifiably Safe Reinforcement Learning (VSRL) algorthms. To learn more about the motivation for this framework, check out our [web experience](https://vsrl-experiment.mybluemix.net/experiment).
 
 ## What is Verifiable Safety?
 
