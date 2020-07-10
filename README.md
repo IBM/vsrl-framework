@@ -157,3 +157,5 @@ See license.txt for details.
 
  * [Issue Tracker](https://github.com/IBM/vsrl-framework/issues)
  * [Slack Channel](https://verifiablysaf-ost4334.slack.com)
+
+[PyTorch installation guide]: https://pytorch.org/get-started/locally/
