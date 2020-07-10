@@ -431,6 +431,8 @@ class PMGoalFinding(Env):
         state[self._w_idx] = 0
         state[self._v_idx] = 0
         state[self._theta_idx] = angle
+        state[self._sin_theta_idx] = sin(angle)
+        state[self._cos_theta_idx] = cos(angle)
         state[self._goal_x_idx] = points[0, 0]
         state[self._goal_y_idx] = points[0, 1]
         state[self._ego_x_idx] = points[1, 0]
