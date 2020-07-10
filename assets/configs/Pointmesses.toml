@@ -1,23 +1,10 @@
-backgrounds = [
-  "../top/bg.png"
-]
+backgrounds = ["../top/bg.png"]
 
 [objects]
 
-blue = [
-  "../top/blue.png"
-]
-
-goal = [
-  "../top/goal.png"
-]
-
-hazard = [
-  "../top/hazard.png"
-]
-
-pointmess = [
-  "../top/pointmess.png"
-]
+agent = ["../top/blue.png"]
+goal = ["../top/goal.png"]
+hazard = ["../top/hazard.png"]
+pointmess = ["../top/pointmess.png"]
 
 [options]

@@ -1,15 +1,8 @@
-backgrounds = [
-  "../lateral/bg.png"
-]
+backgrounds = ["../lateral/bg.png"]
 
 [objects]
 
-red = [
-  "../lateral/red.png"
-]
-
-blue = [
-  "../lateral/blue.png"
-]
+agent = ["../lateral/blue.png"]
+leader = ["../lateral/red.png"]
 
 [options]
