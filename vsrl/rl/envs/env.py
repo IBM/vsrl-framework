@@ -8,6 +8,7 @@
 from abc import ABC, abstractmethod
 from typing import Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
 
+import gym
 import numpy as np
 from PIL import Image
 from rlpyt.spaces.composite import Composite
@@ -22,7 +23,7 @@ class Observation(NamedTuple):
     vector: np.ndarray  # any non-image (1D) features (velocity, angle)
 
 
-class Env(ABC):
+class Env(ABC, gym.Env):
     """
     VSRL environments are bit different from environments in other RL frameworks.
 
@@ -81,21 +82,29 @@ class Env(ABC):
         self._prev_frame = np.zeros((self._height, self._width, c), dtype=np.uint8)
         self._oracle_space = self._make_oracle_space()
         self._action_space = self._make_action_space()
+        self.action_space = gym.spaces.Box(
+            self._action_space.lower_bounds, self._action_space.upper_bounds
+        )
         # this state doesn't have to be entirely correct; reset() is called before step
         self._state = self.oracle_space.sample().astype(np.float32)
         self._done = True
         self._step = 0
 
         if oracle_obs:
-            self.observation_space = FloatBox(
+            self.observation_space = gym.spaces.Box(
                 self.oracle_space.lower_bounds, self.oracle_space.upper_bounds
             )
         else:
-            img_obs_space = IntBox(0, 256, shape=(self._height, self._width, 2 * c))
+            gym.spaces.Dict({"img": gym.spaces.Box(0, 255, shape=(10, 10, 3))})
+            img_obs_space = gym.spaces.Box(
+                0, 255, shape=(self._height, self._width, 2 * c)
+            )
             if vector_obs_bounds is not None:
-                vector_obs_space = FloatBox(*vector_obs_bounds)
-                self.observation_space = Composite(
-                    (img_obs_space, vector_obs_space), Observation
+                vector_obs_space = gym.spaces.Box(
+                    *[np.array(bnd, dtype=np.float32) for bnd in vector_obs_bounds]
+                )
+                self.observation_space = gym.spaces.Dict(
+                    {"img": img_obs_space, "vector": vector_obs_space}
                 )
             else:
                 self.observation_space = img_obs_space
@@ -156,10 +165,6 @@ class Env(ABC):
         Could be empty in environments that only have a raw state.
         """
         return self._oracle_space
-
-    @property
-    def action_space(self) -> Space:
-        return self._action_space
 
     @abstractmethod
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
