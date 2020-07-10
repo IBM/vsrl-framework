@@ -268,23 +268,10 @@ class ImgDataset(Dataset):
             self.transform = transform
         else:
             if self.graycsale:
-                self.transform = Compose(
-                    [
-                        lambda img: img.convert("L"),  # "luminosity", i.e. grayscale
-                        ToTensor(),
-                        Normalize(mean=[0.449], std=[0.226]),  # average of values below
-                    ]
-                )
+                # L for luminosity, i.e. grayscale
+                self.transform = Compose([lambda img: img.convert("L"), ToTensor()])
             else:
-                self.transform = Compose(
-                    [
-                        ToTensor(),
-                        drop_alpha,
-                        Normalize(
-                            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                        ),
-                    ]
-                )
+                self.transform = Compose([ToTensor(), drop_alpha])
 
     def __getitem__(self, index: int):
         img, label = gen_img(

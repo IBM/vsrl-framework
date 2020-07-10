@@ -158,20 +158,22 @@ class ResNetCT0UC_SH(nn.Module):
         resnet18 = torchvision.models.resnet18(pretrained=pretrained)
 
         if grayscale:
-            self.normalize_mean = torch.tensor([0.449]).reshape(1, -1, 1, 1)
-            self.normalize_std = torch.tensor([0.226]).reshape(1, -1, 1, 1)
+            normalize_mean = torch.tensor([0])
+            normalize_std = torch.tensor([1])
             # only difference is 1 input channel instead of 3
             self.conv1 = nn.Conv2d(
                 1, 64, kernel_size=7, stride=2, padding=3, bias=False
             )
         else:
-            self.normalize_mean = torch.tensor([0.485, 0.456, 0.406]).reshape(
-                1, -1, 1, 1
-            )
-            self.normalize_std = torch.tensor([0.229, 0.224, 0.225]).reshape(
-                1, -1, 1, 1
-            )
+            normalize_mean = torch.tensor([0] * 3)
+            normalize_std = torch.tensor([1] * 3)
             self.conv1 = resnet18.conv1
+        self._normalize_mean = nn.Parameter(
+            normalize_mean.float().reshape(1, -1, 1, 1), requires_grad=False
+        )
+        self._normalize_std = nn.Parameter(
+            normalize_std.float().reshape(1, -1, 1, 1), requires_grad=False
+        )
 
         self.bn1 = resnet18.bn1
         self.relu = resnet18.relu
@@ -192,6 +194,8 @@ class ResNetCT0UC_SH(nn.Module):
 
     def forward(self, x):
         # normal resnet18
+
+        x = (x - self._normalize_mean) / self._normalize_std
 
         ## stem
         x = self.conv1(x)
@@ -222,10 +226,14 @@ class CenterTrack(pl.LightningModule):
         grayscale: bool = False,
         img_scale: int = 1,
         label_scale: int = 4,
+        fit_mean_std: bool = True,
     ):
         """
         :param pretrained: whether to use pretrained resnet18 or train it from scratch
         :param freeze: whether to freeze the weights in resnet18
+        :param fit_mean_std: if True, fit channel-wise mean and standard deviation
+          parameters to one epoch's worth of generated images. Otherwise, the default
+          means and standard deviations from the model will be kept.
         """
         super().__init__()
         if config_path:
@@ -264,6 +272,7 @@ class CenterTrack(pl.LightningModule):
         self.grayscale = grayscale
         self.img_scale = img_scale
         self.label_scale = label_scale
+        self._fit_mean_std = fit_mean_std
         self.step = 0
         self.dset = None
 
@@ -298,6 +307,17 @@ class CenterTrack(pl.LightningModule):
             img_scale=self.img_scale,
             label_scale=self.label_scale,
         )
+
+        if self._fit_mean_std:
+            imgs = []
+            for _ in range(self.epoch_size):
+                imgs.append(self.dset[0][0])
+
+            imgs = torch.stack(imgs)
+            means = imgs.mean([0, 2, 3])
+            stds = (imgs - means).std([0, 2, 3])
+            self.model._normalize_mean[:] = means
+            self.model._normalize_std[:] = stds
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
@@ -374,6 +394,7 @@ class CenterTrack(pl.LightningModule):
         avg_metrics = {}
         for key in keys:
             avg_metrics[key] = torch.stack([o[key] for o in outputs]).float().mean()
+        avg_metrics["lr"] = self.trainer.optimizers[0].param_groups[0]["lr"]
         self.logger.log_metrics(avg_metrics, step=self.step)
         return avg_metrics
 
@@ -389,10 +410,6 @@ class CenterTrack(pl.LightningModule):
 
         imgs = imgs.type(torch.float32)
         imgs.mul_(1.0 / 255)
-        if hasattr(self.model, "normalize_mean"):
-            mean = self.model.normalize_mean.to(imgs.device)
-            std = self.model.normalize_std.to(imgs.device)
-            imgs.sub_(mean).div_(std)
 
         with torch.no_grad():
             preds = self(imgs)
