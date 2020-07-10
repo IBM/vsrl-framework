@@ -130,7 +130,7 @@ class PMGoalFinding(Env):
         extra_hazard_size: Optional[int] = None,
         walls: bool = False,
         dense_rewards: bool = False,
-        randomize_agent_start: bool = False,
+        randomize_goal: bool = False,
     ):
         """
         :param extra_hazard_size: for debugging only; this renders hazards a second time
@@ -160,7 +160,7 @@ class PMGoalFinding(Env):
         self._extra_hazard_size = extra_hazard_size
         self._walls = walls
         self._dense_rewards = dense_rewards
-        self._randomize_agent_start = randomize_agent_start
+        self._randomize_goal = randomize_goal
         self.place_pointers = False
 
         # [v, cos(theta), sin(theta)]
@@ -405,13 +405,12 @@ class PMGoalFinding(Env):
 
     def reset(self) -> np.ndarray:
         state = np.empty_like(self._state)
+        angle = random.random() * 2 * pi
 
-        if self._randomize_agent_start:
+        if self._randomize_goal:
             initial_points = None
-            angle = random.random() * 2 * pi
         else:
-            initial_points = np.array([[self._width // 2, self._height // 2]])
-            angle = 0
+            initial_points = np.array([[3 * self._width // 4, 3 * self._height // 4]])
 
         # place objects so they don't collide
         points = gen_separated_points(
@@ -426,10 +425,10 @@ class PMGoalFinding(Env):
         state[self._w_idx] = 0
         state[self._v_idx] = 0
         state[self._theta_idx] = angle
-        state[self._ego_x_idx] = points[0, 0]
-        state[self._ego_y_idx] = points[0, 1]
-        state[self._goal_x_idx] = points[1, 0]
-        state[self._goal_y_idx] = points[1, 1]
+        state[self._goal_x_idx] = points[0, 0]
+        state[self._goal_y_idx] = points[0, 1]
+        state[self._ego_x_idx] = points[1, 0]
+        state[self._ego_y_idx] = points[1, 1]
         state[self._obs_start_idx :] = points[2:].ravel()
 
         assert self._is_valid_state(state), self.oracle_space.to_state(state)
