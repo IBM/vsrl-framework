@@ -115,9 +115,11 @@ class PMGoalFinding(Env):
     _goal_x_idx: int = 2
     _goal_y_idx: int = 3
     _theta_idx: int = 4
-    _v_idx: int = 5
-    _w_idx: int = 6
-    _obs_start_idx: int = 7  # index of first obstacle. from here on, the state is
+    _sin_theta_idx = 5
+    _cos_theta_idx = 6
+    _v_idx: int = 7
+    _w_idx: int = 8
+    _obs_start_idx: int = 9  # index of first obstacle. from here on, the state is
     # (obs0_x, obs0_y, obs1_x, ...) for all num_obstacles obstacles
 
     def __init__(
@@ -214,6 +216,8 @@ class PMGoalFinding(Env):
                 self._height - self.map_buffer,
             ),
             vexpr.Variable("theta"): (-2 * pi, 2 * pi),
+            vexpr.Variable("sin_theta"): (-1, 1),
+            vexpr.Variable("cos_theta"): (-1, 1),
             vexpr.Variable("v"): (0, self.max_v),
             vexpr.Variable("w"): (self.min_w, self.max_w),
         }
@@ -252,6 +256,8 @@ class PMGoalFinding(Env):
             new_v = self.max_v
 
         theta0 = self._state[self._theta_idx]
+        sin_theta0 = self._state[self._sin_theta_idx]
+        cos_theta0 = self._state[self._cos_theta_idx]
         new_state = self._state.copy()
 
         tw = self.T * w
@@ -262,14 +268,14 @@ class PMGoalFinding(Env):
         elif theta < -2 * pi:
             theta += 2 * pi
 
-        cos_theta0 = cos(theta0)
-        sin_theta0 = sin(theta0)
         cos_theta = cos(theta)
         sin_theta = sin(theta)
 
         new_state[self._w_idx] = w
         new_state[self._v_idx] += a * self.T
         new_state[self._theta_idx] = theta
+        new_state[self._sin_theta_idx] = sin_theta
+        new_state[self._cos_theta_idx] = cos_theta
 
         if w != 0:
             new_state[self._ego_x_idx] += (1 / w ** 2) * (
@@ -349,7 +355,7 @@ class PMGoalFinding(Env):
         :param state:
         :return: (reward, done_code). Use _final_state_description to interpret done_code.
         """
-        egox, egoy, goalx, goaly = state2[:4]
+        egox, egoy = state2[:2]
         vector_to_goal = state2[2:4] - state2[:2]
         dist_to_goal = sqrt(np.dot(vector_to_goal, vector_to_goal))
         # if we have gamma = 0.99 then getting a constant reward c for H steps gives
