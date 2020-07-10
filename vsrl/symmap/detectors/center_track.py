@@ -67,6 +67,7 @@ class ResNetCT(nn.Module):
     def __init__(
         self, n_classes: int, pretrained=True, freeze=False, grayscale: bool = False,
     ):
+        assert False, "Update normalization"
         super().__init__()
         self.n_classes = n_classes
         resnet18 = torchvision.models.resnet18(pretrained=pretrained)
