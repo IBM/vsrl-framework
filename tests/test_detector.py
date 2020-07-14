@@ -13,6 +13,7 @@ Tests:
 """
 
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -31,17 +32,17 @@ def get_config_for_env(env: str) -> Path:
 @pytest.mark.parametrize("Env", ENVS)
 def test_detector_no_error(Env) -> None:
     config_path = get_config_for_env(Env.__name__)
-    save_dir = "/tmp/models"
-    model = train_center_track(
-        config_path,
-        save_dir,
-        max_epochs=1,
-        epoch_size=100,
-        img_scale=4,
-        grayscale=True,
-        force_offline=True,
-        prog_bar=False,
-    )
+    with TemporaryDirectory(prefix="models") as save_dir:
+        model = train_center_track(
+            config_path,
+            save_dir,
+            max_epochs=1,
+            epoch_size=100,
+            img_scale=4,
+            grayscale=True,
+            force_offline=True,
+            prog_bar=False,
+        )
     # TODO: load detector from checkpoint, ensure it matches the current model
 
 
