@@ -32,6 +32,13 @@ def constrained_sample_continuous(
 
 
 def wrap_environment(GymEnv):
+    """
+    Create a wrapper class for GymEnv which enforces safety.
+    :param GymEnv: must have a `constraint_func`
+    :returns: `SafeGymEnv` - a wrapper which uses the constraint to only allow
+      `GymEnv.step` to be called with safe actions.
+    """
+
     if not hasattr(GymEnv, "constraint_func"):
         raise ValueError("To be safe, `GymEnv` must have a `constraint_func`.")
 
@@ -68,7 +75,6 @@ def wrap_environment(GymEnv):
 
             self._log_unsafe_transitions = log_unsafe_transitions
             self._fallback_action = fallback_action
-            self._oracle_safety = oracle_safety
 
         def step(self, action, sym_features=None):
             constraint_used = False
@@ -97,7 +103,7 @@ def wrap_environment(GymEnv):
             if (
                 self._log_unsafe_transitions
                 and info["action_unsafe"]
-                and (sym_features is not None or self._oracle_safety)
+                and (sym_features is not None)
             ):
                 debug_dir = Path.home() / "debug"
                 debug_dir.mkdir(exist_ok=True)
@@ -106,3 +112,29 @@ def wrap_environment(GymEnv):
             return obs, reward, done, info
 
     return SafeGymEnv
+
+
+def wrap_symbolic_observation_env(Env):
+    """
+    The VSRL framework's safety wrapper for environments expects that each `env.step`
+    call will provide the current symbolic (high-level) features in addition to the
+    action. If an environment already returns the symbolic features as its observations,
+    this wrapper can be used to pass those in automatically.
+    """
+
+    class SymbolicObsEnvWrapper(Env):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._sym_features = None
+
+        def reset(self):
+            obs = super().reset()
+            self._sym_features = obs
+            return obs
+
+        def step(self, action):
+            obs, reward, done, info = super().step(action, self._sym_features)
+            self._sym_features = obs
+            return obs, reward, done, info
+
+    return SymbolicObsEnvWrapper
