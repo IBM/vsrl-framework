@@ -34,7 +34,7 @@ Getting these braking distance calculations right is non-trivial. Getting safety
 If you want to run your models on GPUs, first follow the [PyTorch installation guide] to get the correct version of PyTorch for your CUDA version (otherwise, our dependencies include a CPU-only version).
 
 ```
-git clone git@github.com:IBM/vsrl-framework.git
+git clone https://github.com/IBM/vsrl-framework.git
 cd vsrl-framework
 pip install .
 # alternatively, pip install git+https://github.com/IBM/vsrl-framework.git

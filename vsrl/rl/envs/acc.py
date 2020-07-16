@@ -136,7 +136,6 @@ class ACC(Env):
                 vexpr.Variable("follower_pos"): (0, self._width),
                 vexpr.Variable("rvel"): (-100, 100),
                 vexpr.Variable("leader_pos"): (0, self._width),
-                vexpr.Variable("ra"): (-self.B, self.A),
             }
         )
 
