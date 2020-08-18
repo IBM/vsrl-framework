@@ -82,8 +82,10 @@ class Env(ABC, gym.Env):
         self._prev_frame = np.zeros((self._height, self._width, c), dtype=np.uint8)
         self._oracle_space = self._make_oracle_space()
         self._action_space = self._make_action_space()
+        # use float32 for the spaces to avoid a warning from gym
         self.action_space = gym.spaces.Box(
-            self._action_space.lower_bounds, self._action_space.upper_bounds
+            self._action_space.lower_bounds.astype(np.float32),
+            self._action_space.upper_bounds.astype(np.float32),
         )
         # this state doesn't have to be entirely correct; reset() is called before step
         self._state = self.oracle_space.sample().astype(np.float32)
@@ -92,12 +94,12 @@ class Env(ABC, gym.Env):
 
         if oracle_obs:
             self.observation_space = gym.spaces.Box(
-                self.oracle_space.lower_bounds, self.oracle_space.upper_bounds
+                self.oracle_space.lower_bounds.astype(np.float32),
+                self.oracle_space.upper_bounds.astype(np.float32),
             )
         else:
-            gym.spaces.Dict({"img": gym.spaces.Box(0, 255, shape=(10, 10, 3))})
             img_obs_space = gym.spaces.Box(
-                0, 255, shape=(self._height, self._width, 2 * c)
+                np.float32(0), np.float32(255), shape=(self._height, self._width, 2 * c)
             )
             if vector_obs_bounds is not None:
                 vector_obs_space = gym.spaces.Box(

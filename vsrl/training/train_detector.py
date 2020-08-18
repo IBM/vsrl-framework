@@ -30,6 +30,7 @@ def train_center_track(
     prog_bar: bool = True,
     force_offline: bool = False,
     upload_model: bool = False,
+    use_logger: bool = True,
 ):
     """
     Train a CenterTrack / CenterNet object detector.
@@ -53,6 +54,7 @@ def train_center_track(
     :param force_offline: if True, no data will be sent to comet.ml even if an API key
       is found (data can only be sent if an API key is found, e.g. in ~/.comet.config)
     :param upload_model: whether to upload the final checkpoint to comet.ml
+    :param use_logger: if True, a CometLogger is used; otherwise, no logging is done
     """
     config_path = Path(config_path)
 
@@ -71,30 +73,38 @@ def train_center_track(
     api_key = get_api_key(None, get_config())
     project_name = "vsrl"
     exp_name = f"detector_{config_path.name.split('.')[0]}"
-    logger = CometLogger(
-        api_key,
-        save_dir,
-        project_name=project_name,
-        experiment_name=exp_name,
-        force_offline=force_offline,
-        log_env_gpu=False,
-        log_env_cpu=False,
-    )
+    if use_logger:
+        logger = CometLogger(
+            api_key,
+            save_dir,
+            project_name=project_name,
+            experiment_name=exp_name,
+            force_offline=force_offline,
+            log_env_gpu=False,
+            log_env_cpu=False,
+        )
 
-    logger.log_hyperparams(
-        {
-            "img_scale": img_scale,
-            "grayscale": grayscale,
-            "model_type": model_type,
-            "label_scale": label_scale,
-            "config_name": config_path.name,
-        }
-    )
+        logger.log_hyperparams(
+            {
+                "img_scale": img_scale,
+                "grayscale": grayscale,
+                "model_type": model_type,
+                "label_scale": label_scale,
+                "config_name": config_path.name,
+            }
+        )
+        checkpoint_callback = True
+    else:
+        logger = False
+        checkpoint_callback = False
+        upload_model = False
+
     trainer = pl.Trainer(
         logger,
         gpus=devices,
         max_epochs=max_epochs,
         progress_bar_refresh_rate=int(prog_bar),
+        checkpoint_callback=checkpoint_callback,
     )
     trainer.fit(model)
     if upload_model:

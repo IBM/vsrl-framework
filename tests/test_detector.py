@@ -40,7 +40,7 @@ def test_detector_no_error(Env) -> None:
             epoch_size=100,
             img_scale=4,
             grayscale=True,
-            force_offline=True,
+            use_logger=False,
             prog_bar=False,
         )
     # TODO: load detector from checkpoint, ensure it matches the current model

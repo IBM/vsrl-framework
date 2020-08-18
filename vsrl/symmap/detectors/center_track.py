@@ -357,7 +357,7 @@ class CenterTrack(pl.LightningModule):
 
         loss = loss_focal + self.lambda_offset * loss_offset
 
-        if self.step % 50 == 0:
+        if self.step % 50 == 0 and self.logger:
             metrics = {
                 "loss": loss,
                 "focal_loss": loss_focal,
@@ -396,7 +396,8 @@ class CenterTrack(pl.LightningModule):
         for key in keys:
             avg_metrics[key] = torch.stack([o[key] for o in outputs]).float().mean()
         avg_metrics["lr"] = self.trainer.optimizers[0].param_groups[0]["lr"]
-        self.logger.log_metrics(avg_metrics, step=self.step)
+        if self.logger:
+            self.logger.log_metrics(avg_metrics, step=self.step)
         return avg_metrics
 
     def detect(
