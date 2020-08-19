@@ -30,6 +30,8 @@ def gen_separated_points(
         points = np.empty((n_points, len(lower_bounds)))
         next_point_idx = 0
     else:
+        if len(initial_points) == n_points:
+            return initial_points
         points = np.empty((n_points - len(initial_points), len(lower_bounds)))
         points = np.concatenate((initial_points, points))
         next_point_idx = len(initial_points)
@@ -50,3 +52,9 @@ def gen_separated_points(
             next_point_idx += 1
             if next_point_idx == n_points:
                 return points
+
+
+class EpisodeTerminatedException(Exception):
+    def __init__(self):
+        msg = "This episode has terminated; call reset before stepping again."
+        super().__init__(msg)

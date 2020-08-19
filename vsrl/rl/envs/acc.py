@@ -20,6 +20,7 @@ from vsrl.symmap.symbolic_mapper import SymFeatExtractor
 from vsrl.utils.assets import get_image_path
 from vsrl.verifier import expr as vexpr
 
+from ._utils import EpisodeTerminatedException
 from .env import Env
 
 # Note: this is the safety constraint for a modified environment where the lead agent can move:
@@ -148,9 +149,7 @@ class ACC(Env):
         assert action in self.action_space, f"{action} was not in the action space."
         action = action[0]
         if self._done:
-            raise ValueError(
-                "This episode has terminated; call reset before stepping again."
-            )
+            raise EpisodeTerminatedException()
         self._step += 1
         x, rv, ox = self._state
         new_state = np.empty(3, dtype=np.float32)

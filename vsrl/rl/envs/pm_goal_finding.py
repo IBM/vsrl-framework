@@ -20,7 +20,7 @@ from vsrl.spaces import CompactSet
 from vsrl.symmap.symbolic_mapper import SymFeatExtractor
 from vsrl.utils.assets import get_image_path
 
-from ._utils import gen_separated_points
+from ._utils import EpisodeTerminatedException, gen_separated_points
 from .env import Env
 
 REACHED_STEP_LIMIT = 4
@@ -246,10 +246,7 @@ class PMGoalFinding(Env):
         :param action: w, a
         """
         if self._done:
-            # TODO: make a custom exception for this; use it in all envs
-            raise ValueError(
-                "This episode has terminated; call reset before stepping again."
-            )
+            raise EpisodeTerminatedException()
         assert action in self.action_space
         w, a = action
 

@@ -21,7 +21,7 @@ from vsrl.spaces.space import Space
 from vsrl.symmap.symbolic_mapper import SymFeatExtractor
 from vsrl.utils.assets import get_image_path
 
-from ._utils import gen_separated_points
+from ._utils import EpisodeTerminatedException, gen_separated_points
 from .env import Env
 
 REACHED_STEP_LIMIT = 4
@@ -289,9 +289,7 @@ class Pointmesses(Env):
         :param action: w, a
         """
         if self._done:
-            raise ValueError(
-                "This episode has terminated; call reset before stepping again."
-            )
+            EpisodeTerminatedException()
         assert action in self.action_space
         w, a = action
 
