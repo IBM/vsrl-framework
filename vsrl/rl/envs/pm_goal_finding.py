@@ -142,13 +142,20 @@ class PMGoalFinding(Env):
         :param walls: don't let the agent go off the screen; no boundary penalty
         :param dense_rewards: rewards for distance + angle to goal
         """
+        scene = Image.open(get_image_path("top/bg.png"))
+        ego_img = Image.open(get_image_path("top/blue.png"))
+        goal_img = Image.open(get_image_path("top/goal.png"))
+        hazard_img = Image.open(get_image_path("top/hazard.png"))
+        hazard_x_idx = [self._obs_start_idx + 2 * i for i in range(num_obstacles)]
+        hazard_y_idx = [x_idx + 1 for x_idx in hazard_x_idx]
+        objs = {
+            "ego": (ego_img, self._ego_x_idx, self._ego_y_idx),
+            "goal": (goal_img, self._goal_x_idx, self._goal_y_idx),
+            "hazard": (hazard_img, hazard_x_idx, hazard_y_idx),
+        }
+
         # load graphics
         scene = Image.open(get_image_path("top/bg.png"))
-        self._pointer = Image.open(get_image_path("pointer.png"))  # for debugging.
-        self._egoimg = Image.open(get_image_path("top/blue.png"))
-        self._hazardimg = Image.open(get_image_path("top/hazard.png"))
-        self._goalimg = Image.open(get_image_path("top/goal.png"))
-        img_names = ["_egoimg", "_hazardimg", "_goalimg", "_scene"]
 
         self.map_buffer = 12
         self.T = 0.1
@@ -172,19 +179,20 @@ class PMGoalFinding(Env):
             grayscale,
             oracle_obs,
             scene,
-            img_names,
+            objs,
             vector_obs_bounds=vector_obs_bounds,
         )
 
         # _radius determines if a collision is happening. We'll use the sizes of the
         # images to directly compute when they overlap.
-        assert self._hazardimg.size[0] == self._hazardimg.size[1]
+        assert hazard_img.size[0] == hazard_img.size[1]
         # not true for ego img, but width is larger, so radius is still okay
         # assert self._egoimg.size[0] == self._egoimg.size[1]
-        assert self._goalimg.size[0] == self._hazardimg.size[0]
-        self._radius = self._egoimg.size[0] / 2 + self._hazardimg.size[0] / 2
+        assert goal_img.size[0] == hazard_img.size[0]
+        self._radius = ego_img.size[0] / (2 * img_scale) + hazard_img.size[0] / (
+            2 * img_scale
+        )
         self._safe_sep += self._radius
-        # If true, we'll place yellow dots at the midpoints of various objects.
         self._max_goal_dist = sqrt(self._width ** 2 + self._height ** 2)
 
     def _make_action_space(self) -> CompactSet:
@@ -421,7 +429,7 @@ class PMGoalFinding(Env):
         # place objects so they don't collide
         points = gen_separated_points(
             self.num_obstacles + 2,
-            sep=self._hazardimg.width,
+            sep=self._radius,
             lower_bounds=np.array([self.map_buffer, self.map_buffer]),
             upper_bounds=np.array(
                 [self._width - self.map_buffer, self._height - self.map_buffer]
@@ -446,79 +454,6 @@ class PMGoalFinding(Env):
         self._prev_frame.fill(0)
         obs = self._get_obs(np.array([0, cos(angle), sin(angle)], dtype=np.float32))
         return obs
-
-    def _rotated_ego_img(self, state: np.ndarray) -> Image:
-        theta = state[self._theta_idx]
-        # the image is facing downwards, so we need a 90 degree offset
-        angle = 90 + theta * 180 / pi
-        ego_rotated = self._egoimg.rotate(angle)
-        ego_rotated.mask = self._egoimg.mask.rotate(angle)
-        return ego_rotated
-
-    def render(self) -> Image:
-        rotated_ego = self._rotated_ego_img(self._state)
-        scene = self._scene.copy()
-        for i in range(self.num_obstacles):
-            xidx = self._obs_start_idx + 2 * i
-            yidx = xidx + 1
-
-            if self._extra_hazard_size is not None:
-                shape = (
-                    self._hazardimg.width + self._extra_hazard_size,
-                    self._hazardimg.height + self._extra_hazard_size,
-                )
-                img = self._hazardimg.resize(shape)
-                mask = self._hazardimg.mask.resize(shape)
-                mask = Image.fromarray(
-                    ((np.asarray(mask) / 2)).astype(np.uint8), mode="L"
-                )
-                scene.paste(
-                    img,
-                    paste_coordinates(
-                        img, self._state[xidx], self._height - self._state[yidx],
-                    ),
-                    mask=mask,
-                )
-
-            scene.paste(
-                self._hazardimg,
-                paste_coordinates(
-                    self._hazardimg, self._state[xidx], self._height - self._state[yidx]
-                ),
-                mask=self._hazardimg.mask,
-            )
-            if self.place_pointers:
-                scene.paste(
-                    self._pointer,
-                    (int(self._state[xidx]), self._height - int(self._state[yidx]),),
-                )
-        scene.paste(
-            self._goalimg,
-            paste_coordinates(
-                self._goalimg,
-                self._state[self._goal_x_idx],
-                self._height - self._state[self._goal_y_idx],
-            ),
-            mask=self._goalimg.mask,
-        )
-        scene.paste(
-            rotated_ego,
-            paste_coordinates(
-                rotated_ego,
-                self._state[self._ego_x_idx],
-                self._height - self._state[self._ego_y_idx],
-            ),
-            mask=rotated_ego.mask,
-        )
-        if self.place_pointers:
-            scene.paste(
-                self._pointer,
-                (
-                    int(self._state[self._ego_x_idx]),
-                    self._height - int(self._state[self._ego_y_idx]),
-                ),
-            )
-        return scene
 
     def state_constants(self):
         return {

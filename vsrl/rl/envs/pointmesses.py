@@ -14,9 +14,7 @@ import portion
 import torch
 from PIL import Image
 
-import vsrl.parser.parser
 import vsrl.verifier.expr as vexpr
-import vsrl.verifier.expr_helpers
 from vsrl.rl.envs.render_helpers import paste_coordinates
 from vsrl.spaces.continuous import CompactSet
 from vsrl.spaces.space import Space
@@ -142,13 +140,26 @@ class Pointmesses(Env):
         walls: bool = False,
         dense_rewards: bool = False,
     ):
-        self._pointer = Image.open(get_image_path("pointer.png"))
-        self._egoimg = Image.open(get_image_path("top/blue.png"))
-        self._hazardimg = Image.open(get_image_path("top/hazard.png"))
-        self._goalimg = Image.open(get_image_path("top/goal.png"))
-        self._pointmessimg = Image.open(get_image_path("top/pointmess.png"))
         scene = Image.open(get_image_path("top/bg.png"))
-        img_names = ["_egoimg", "_hazardimg", "_goalimg", "_pointmessimg", "_scene"]
+        ego_img = Image.open(get_image_path("top/blue.png"))
+        goal_img = Image.open(get_image_path("top/goal.png"))
+        hazard_img = Image.open(get_image_path("top/hazard.png"))
+        pm_img = Image.open(get_image_path("top/pointmess.png"))
+        hazard_x_idx = [self._obs_start_idx + 2 * i for i in range(num_obstacles)]
+        hazard_y_idx = [x_idx + 1 for x_idx in hazard_x_idx]
+        n_pm_total = (
+            num_initial_pointmesses + num_pointmesses_on_collision * num_obstacles
+        )
+        pm_x_idx = [
+            self._obs_start_idx + num_obstacles * 2 + 2 * i for i in range(n_pm_total)
+        ]
+        pm_y_idx = [x_idx + 1 for x_idx in pm_x_idx]
+        objs = {
+            "ego": (ego_img, self._ego_x_idx, self._ego_y_idx),
+            "goal": (goal_img, self._goal_x_idx, self._goal_y_idx),
+            "hazard": (hazard_img, hazard_x_idx, hazard_y_idx),
+            "pointmess": (pm_img, pm_x_idx, pm_y_idx),
+        }
 
         self.num_obstacles = num_obstacles
         self.num_initial_pointmess = num_initial_pointmesses
@@ -174,24 +185,22 @@ class Pointmesses(Env):
             grayscale,
             oracle_obs,
             scene,
-            img_names,
+            objs,
             vector_obs_bounds=vector_obs_bounds,
         )
 
         # properties relevant to computing collisions.
         # RADIUS determines if a collision is happening. We'll use the sizes of the images to directly compute when they
         # overlap.
-        assert self._hazardimg.size[0] == self._hazardimg.size[1]
-        assert self._goalimg.size[0] == self._hazardimg.size[0]
-        self._hazard_radius = self._egoimg.size[0] / 2 + self._hazardimg.size[0] / 2
+        assert hazard_img.size[0] == hazard_img.size[1]
+        assert goal_img.size[0] == hazard_img.size[0]
+        assert pm_img.size[0] == pm_img.size[1]
+        self._hazard_radius = (ego_img.size[0] + hazard_img.size[0]) / (2 * img_scale)
         self._safe_sep += self._hazard_radius
-        assert self._pointmessimg.size[0] == self._pointmessimg.size[1]
-        self._pointmess_radius = (
-            self._egoimg.size[0] / 2 + self._pointmessimg.size[0] / 2
-        )
+        self._pointmess_radius = (ego_img.size[0] + pm_img.size[0]) / (2 * img_scale)
 
     def _make_action_space(self) -> Space:
-        return vsrl.spaces.continuous.CompactSet(
+        return CompactSet(
             {
                 vexpr.Variable("w"): (self.min_w, self.max_w),  # rotational velocity
                 vexpr.Variable("a"): (-self.B, self.A),  # translational acceleration
@@ -505,7 +514,7 @@ class Pointmesses(Env):
         # divide the circle around the hazard into N equivalently sized regions so that the pointmesses would be
         # evenly distributed. Assert that we have enough space to place self.num_pointmesses_on_collision.
         # finally
-        hazard_x_size, hazard_y_size = self._hazardimg.size
+        hazard_x_size, hazard_y_size = self._objs["hazard"][0].img.size
         # todo this is the place where we define the locations of new pointmesses.
         # needs some work.
         placement_options = [
@@ -537,7 +546,7 @@ class Pointmesses(Env):
         # place objects so they don't collide
         points = gen_separated_points(
             self.num_obstacles + self.num_initial_pointmess + 2,
-            sep=self._hazardimg.width,
+            sep=self._hazard_radius,
             lower_bounds=np.array([self.map_buffer, self.map_buffer]),
             upper_bounds=np.array(
                 [self._width - self.map_buffer, self._height - self.map_buffer]
@@ -558,82 +567,6 @@ class Pointmesses(Env):
         self._prev_frame.fill(0)
         obs = self._get_obs(np.array([0, cos(angle), sin(angle)], dtype=np.float32))
         return obs
-
-    def _rotated_ego_img(self, state: np.ndarray) -> Image:
-        theta = state[self._theta_idx]
-        # the image is facing downwards, so we need a 90 degree offset
-        angle = 90 + theta * 180 / pi
-        ego_rotated = self._egoimg.rotate(angle)
-        ego_rotated.mask = self._egoimg.mask.rotate(angle)
-        return ego_rotated
-
-    def render(self) -> Image:
-        rotated_ego = self._rotated_ego_img(self._state)
-        scene = self._scene.copy()
-        # place the obstacles.
-        for i in range(self.num_obstacles):
-            # place the hazards
-            xidx = self._obs_start_idx + 2 * i
-            yidx = xidx + 1
-            if not isnan(self._state[xidx]):
-                scene.paste(
-                    self._hazardimg,
-                    paste_coordinates(
-                        self._hazardimg,
-                        self._state[xidx],
-                        self._height - self._state[yidx],
-                    ),
-                    mask=self._hazardimg.mask,
-                )
-                if self.place_pointers:
-                    scene.paste(
-                        self._pointer,
-                        (int(self._state[xidx]), self._height - int(self._state[yidx])),
-                    )
-        # place the goal
-        scene.paste(
-            self._goalimg,
-            paste_coordinates(
-                self._goalimg,
-                self._state[self._goal_x_idx],
-                self._height - self._state[self._goal_y_idx],
-            ),
-            mask=self._goalimg.mask,
-        )
-        # place the ego.
-        scene.paste(
-            rotated_ego,
-            paste_coordinates(
-                rotated_ego,
-                self._state[self._ego_x_idx],
-                self._height - self._state[self._ego_y_idx],
-            ),
-            mask=rotated_ego.mask,
-        )
-        if self.place_pointers:
-            scene.paste(
-                self._pointer,
-                (
-                    int(self._state[self._ego_x_idx]),
-                    self._height - int(self._state[self._ego_y_idx]),
-                ),
-            )
-        # place the pointmesses.
-        pointmesses = self._placed_pointmesses()
-        for i in range(0, len(pointmesses), 2):
-            # place the pointmesses
-            px, py = pointmesses[i], pointmesses[i + 1]
-            assert not isnan(px) and not isnan(py)
-            scene.paste(
-                self._pointmessimg,
-                paste_coordinates(self._pointmessimg, px, self._height - py),
-                mask=self._pointmessimg.mask,
-            )
-            if self.place_pointers:
-                scene.paste(
-                    self._pointer, (int(px), self._height - int(py)),
-                )
-        return scene
 
     def state_constants(self):
         return {

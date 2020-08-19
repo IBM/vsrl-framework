@@ -6,21 +6,45 @@
 #
 
 from abc import ABC, abstractmethod
-from typing import Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
+from math import isnan, pi
+from typing import Dict, List, NamedTuple, Optional, Sequence, Tuple, TypeVar, Union
 
 import gym
 import numpy as np
 from PIL import Image
-from rlpyt.spaces.composite import Composite
-from rlpyt.spaces.float_box import FloatBox
-from rlpyt.spaces.int_box import IntBox
 
+from vsrl.rl.envs.render_helpers import paste_coordinates
 from vsrl.spaces.space import Space
 
 
 class Observation(NamedTuple):
     img: np.ndarray
     vector: np.ndarray  # any non-image (1D) features (velocity, angle)
+
+
+class MaskedImg(NamedTuple):
+    img: Image.Image
+    mask: Image.Image
+
+
+_T = TypeVar("_T")
+_TIdx = Union[int, float]
+_TMaybeSeq = Union[_T, Sequence[_T]]
+_TObjsInit = Dict[
+    str,
+    Union[
+        Tuple[Image.Image, _TMaybeSeq[_TIdx], _TMaybeSeq[_TIdx]],
+        Tuple[
+            Image.Image,
+            _TMaybeSeq[_TIdx],
+            _TMaybeSeq[_TIdx],
+            _TMaybeSeq[Optional[_TIdx]],
+        ],
+    ],
+]
+_TObjs = Dict[
+    str, Tuple[MaskedImg, Sequence[_TIdx], Sequence[_TIdx], Sequence[Optional[_TIdx]]]
+]
 
 
 class Env(ABC, gym.Env):
@@ -37,10 +61,8 @@ class Env(ABC, gym.Env):
         img_scale: int,
         grayscale: bool,
         oracle_obs: bool,
-        scene: Optional[Image.Image] = None,
-        preprocess_img_names: Sequence[str] = (),
-        height: Optional[int] = None,
-        width: Optional[int] = None,
+        scene: Image.Image,
+        objs: _TObjsInit,
         horizon: int = 1000,
         vector_obs_bounds: Optional[Tuple[List[int], List[int]]] = None,
     ):
@@ -50,11 +72,10 @@ class Env(ABC, gym.Env):
         :param graycsale: if True, all images (and thus observations) are converted to
           grayscale.
         :param oracle_obs: whether to return oracle observations (if True) or images
-        :param preprocess_img_names: the names of the images which will be downscaled /
-          grayscaled (these should all be attributes of `self` already except _scene
-          which is assigned here)
-        :param height: `height` and `width` are extracted from `scene`; they should only
-          be given explicitly if `scene` is None
+        :param objs: {object_name: (img, x_idx, y_idx)} where the indices are into the
+          state vector, i.e. state[x_idx] gives the x location where the image should be
+          pasted when rendering the object. If either index is a float instead of an int,
+          it is used directly as the coordinate instead of as an index into the state vector.
         :param vector_obs_bounds: lower and upper bounds on each dimension of the vector
           part of the observations. If given, observations are named tuples with obs.img
           and obs.vector; a non-`None` `vector_obs` must always be given when `_get_obs`
@@ -67,17 +88,10 @@ class Env(ABC, gym.Env):
         self._img_scale = img_scale
         self._grayscale = grayscale
         self.oracle_obs = oracle_obs
-        self._scene = scene
         self.horizon = horizon
 
-        self._preprocess_imgs(preprocess_img_names)
-        if scene is not None:
-            self._width, self._height = self._scene.size
-        else:
-            if height is None or width is None:
-                raise ValueError("height and width must be given if scene is not.")
-            self._height = height
-            self._width = width
+        self._scene, self._objs = self._preprocess_imgs(scene, objs)
+        self._width, self._height = self._scene.size
         c = 1 if grayscale else 3
         self._prev_frame = np.zeros((self._height, self._width, c), dtype=np.uint8)
         self._oracle_space = self._make_oracle_space()
@@ -111,21 +125,39 @@ class Env(ABC, gym.Env):
             else:
                 self.observation_space = img_obs_space
 
-    def _preprocess_imgs(self, img_names: Iterable[str]) -> None:
-        for img_name in img_names:
-            img = getattr(self, img_name)
+    def _preprocess_imgs(
+        self, scene: Image.Image, objs: _TObjsInit
+    ) -> Tuple[Image.Image, _TObjs]:
+        processed_objs = {}
+        for name, (img, x_idxs, y_idxs, *maybe_theta_idxs) in objs.items():
             img.load()
             if self._img_scale > 1:
                 img = img.reduce(self._img_scale)
             mask = img.split()[-1]  # alpha channel
-            if self._grayscale:
-                img = img.convert("L")  # "luminosity"
-            else:
-                img = img.convert("RGB")
-            if img_name != "_scene":
-                img.mask = mask
+            # L = luminosity
+            img = img.convert("L") if self._grayscale else img.convert("RGB")
 
-            setattr(self, img_name, img)
+            if not isinstance(x_idxs, Sequence):
+                x_idxs = (x_idxs,)
+            if not isinstance(y_idxs, Sequence):
+                y_idxs = (y_idxs,)
+            if maybe_theta_idxs:
+                maybe_theta_idxs = maybe_theta_idxs[0]
+                theta_idxs = (
+                    maybe_theta_idxs
+                    if isinstance(maybe_theta_idxs, Sequence)
+                    else (maybe_theta_idxs,)
+                )
+            else:  # no thetas provided
+                theta_idxs = (None,) * len(x_idxs)
+
+            processed_objs[name] = (MaskedImg(img, mask), x_idxs, y_idxs, theta_idxs)
+
+        scene.load()
+        if self._img_scale > 1:
+            scene = scene.reduce(self._img_scale)
+        scene = scene.convert("L") if self._grayscale else scene.convert("RGB")
+        return scene, processed_objs
 
     def _get_obs(
         self, vector_obs: Optional[np.ndarray] = None
@@ -148,9 +180,34 @@ class Env(ABC, gym.Env):
         img = np.array(self.render())
         return img.reshape(self._height, self._width, -1)
 
-    @abstractmethod
-    def render(self) -> Union[Image.Image, np.ndarray]:
-        raise NotImplementedError
+    def render(self, mode: str = "") -> Union[Image.Image, np.ndarray]:
+        """
+        :param mode: if "array" a numpy array is returned; otherwise, a PIL Image.
+        """
+        scene = self._scene.copy()
+        for (masked_img, x_idxs, y_idxs, theta_idxs) in self._objs.values():
+            for x_idx, y_idx, theta_idx in zip(x_idxs, y_idxs, theta_idxs):
+                x = self._state[x_idx] if isinstance(x_idx, int) else int(x_idx)
+                y = self._state[y_idx] if isinstance(y_idx, int) else int(y_idx)
+                if theta_idx is not None:
+                    theta = (
+                        self._state[theta_idx] * 180 / pi
+                        if isinstance(theta_idx, int)
+                        else theta_idx
+                    )
+                    masked_img.img = masked_img.img.rotate(theta)
+                    masked_img.mask = masked_img.mask.rotate(theta)
+
+                if isnan(x) or isnan(y):
+                    continue
+                scene.paste(
+                    masked_img.img,
+                    paste_coordinates(masked_img.img, x, y),
+                    mask=masked_img.mask,
+                )
+        if mode == "array":
+            return np.array(scene)
+        return scene
 
     @abstractmethod
     def _make_oracle_space(self) -> Space:

@@ -6,17 +6,13 @@
 #
 
 import random
-from math import ceil, sqrt
+from math import sqrt
 from typing import Tuple
 
 import numpy as np
 import torch
 from PIL import Image
 
-import vsrl.parser.parser
-import vsrl.verifier.expr_helpers
-import vsrl.verifier.monitor
-from vsrl.rl.envs.render_helpers import paste_coordinates
 from vsrl.spaces.continuous import CompactSet
 from vsrl.spaces.fin_space import FiniteSpace
 from vsrl.spaces.space import Space
@@ -49,6 +45,9 @@ class ACCSymFeatExtractor(SymFeatExtractor):
 class ACC(Env):
 
     SymFeatClass = ACCSymFeatExtractor
+    _ego_x_idx = 0
+    _rel_vel_idx = 1
+    _leader_x_idx = 2
 
     def __init__(
         self,
@@ -70,10 +69,13 @@ class ACC(Env):
         assert A > 0 and B > 0 and T > 0
 
         scene = Image.open(get_image_path("lateral/bg.png"))
-        self._cimg = Image.open(get_image_path("lateral/blue.png"))
-        self._limg = Image.open(get_image_path("lateral/red.png"))
-        self._pointer = Image.open(get_image_path("pointer.png"))
-        img_names = ["_cimg", "_limg", "_scene"]
+        ego_img = Image.open(get_image_path("lateral/blue.png"))
+        leader_img = Image.open(get_image_path("lateral/red.png"))
+        self._y_coord = 3 / 5 * scene.height / img_scale + 37 / img_scale
+        objs = {
+            "ego": (ego_img, self._ego_x_idx, self._y_coord),
+            "leader": (leader_img, self._leader_x_idx, self._y_coord),
+        }
 
         self.continuous_action_space = continuous_action_space
 
@@ -91,12 +93,11 @@ class ACC(Env):
             grayscale,
             oracle_obs,
             scene,
-            img_names,
+            objs,
             vector_obs_bounds=vector_obs_bounds,
         )
 
         # graphics
-        self._y_coord = int(3 * self._height / 5 + 37 / img_scale)
         self._init_state = np.array(
             [
                 self._width / 4,  # car position
@@ -106,19 +107,15 @@ class ACC(Env):
             dtype=np.float32,
         )
 
-        self._safe_sep += self._cimg.width / 2 + self._limg.width / 2
-        # distance between follower and leader that leads to a crash
-        self._crash_dist = (
-            self._cimg.width / 2 + self._limg.width / 2 + self._buffer_space
-        )
+        self._safe_sep += (ego_img.width + leader_img.width) / (2 * img_scale)
         # the reward-optimal distance back from the leader
-        self._optimal_dist = self._crash_dist + self._cimg.width
+        self._optimal_dist = self._safe_sep + ego_img.width / img_scale
 
     def reset(self, initial_state: np.ndarray = None) -> np.ndarray:
         if initial_state is None:
             initial_state = self._init_state.copy()
             action = np.array([0], dtype=np.float32)
-            max_x = initial_state[2] - self._crash_dist
+            max_x = initial_state[2] - self._safe_sep
             while True:
                 initial_state[0] = random.random() * max_x
                 initial_state[1] = -self.B + (self.A + self.B) * random.random()
@@ -141,9 +138,7 @@ class ACC(Env):
 
     def _make_action_space(self) -> Space:
         if self.continuous_action_space:
-            return vsrl.spaces.continuous.CompactSet(
-                {vexpr.Variable("acc"): (-self.B, self.A)}
-            )
+            return CompactSet({vexpr.Variable("acc"): (-self.B, self.A)})
         else:
             accel_action = np.array([self.A])
             decel_action = np.array([-self.B])
@@ -174,7 +169,7 @@ class ACC(Env):
         return rv
 
     def _is_crashed(self, s):
-        return s[0] > s[2] - self._crash_dist
+        return s[0] > s[2] - self._safe_sep
 
     def compute_reward(self, s1, a, s2):
         if s2[0] <= 0:
@@ -192,28 +187,6 @@ class ACC(Env):
             x <= 0 or self._is_crashed(self._state) or self._step >= self.horizon
         )
         return self._done
-
-    def render(self) -> Image:
-        car_position = self._state[0]
-        leader_position = ceil(self._state[2])
-        assert 0 <= car_position <= self._width
-        assert 0 <= leader_position <= self._width
-
-        scene = self._scene.copy()
-        scene.paste(
-            self._cimg,
-            paste_coordinates(self._cimg, car_position, self._y_coord),
-            mask=self._cimg.mask,
-        )
-        scene.paste(
-            self._limg,
-            paste_coordinates(self._limg, leader_position, self._y_coord),
-            mask=self._limg.mask,
-        )
-        if self.show_pointers:
-            scene.paste(self._pointer, (int(car_position), self._y_coord))
-            scene.paste(self._pointer, (int(leader_position), self._y_coord))
-        return scene
 
     def constraint_func(self, action, sym_feats):
         """
