@@ -195,8 +195,9 @@ class Env(ABC, gym.Env):
                         if isinstance(theta_idx, int)
                         else theta_idx
                     )
-                    masked_img.img = masked_img.img.rotate(theta)
-                    masked_img.mask = masked_img.mask.rotate(theta)
+                    masked_img = MaskedImg(
+                        masked_img.img.rotate(theta), masked_img.mask.rotate(theta)
+                    )
 
                 if isnan(x) or isnan(y):
                     continue

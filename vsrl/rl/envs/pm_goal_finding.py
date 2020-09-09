@@ -149,7 +149,7 @@ class PMGoalFinding(Env):
         hazard_x_idx = [self._obs_start_idx + 2 * i for i in range(num_obstacles)]
         hazard_y_idx = [x_idx + 1 for x_idx in hazard_x_idx]
         objs = {
-            "ego": (ego_img, self._ego_x_idx, self._ego_y_idx),
+            "ego": (ego_img, self._ego_x_idx, self._ego_y_idx, self._theta_idx),
             "goal": (goal_img, self._goal_x_idx, self._goal_y_idx),
             "hazard": (hazard_img, hazard_x_idx, hazard_y_idx),
         }
