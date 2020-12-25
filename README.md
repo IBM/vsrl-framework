@@ -114,7 +114,7 @@ For more visually complex environments (e.g. in the real world), a good pre-trai
 The `scripts/train_rl.py` provides a convienant way of running training agents using VSRL:
 
 ```bash
-python scripts/train_rl.py --env_name ACC --pbar
+python scripts/train_rl.py --env_name ACC --pbar true
 ```
 
 ### Verifying Constraints
@@ -137,7 +137,7 @@ The following BibTeX provides a canonical citation for VSRL:
 
 The main components of VSRL are additionally described in several papers:
 
- * Nathan Hunt, Nathan Fulton, Sara Magliacane, Nghia Hoang, Subhro Das, Armando Solar-Lezama. [Verifiably Safe Exploration for End-to-End Reinforcement Learning](https://arxiv.org/abs/2007.01223). arXiv:2007.01223, 2020.
+ * Nathan Hunt, Nathan Fulton, Sara Magliacane, Nghia Hoang, Subhro Das, Armando Solar-Lezama. [Verifiably Safe Exploration for End-to-End Reinforcement Learning](https://arxiv.org/abs/2007.01223). To be presented at the 24th ACM International Conference on Hybrid Systems: Computation and Control (HSCC 2021).
  * Nathan Fulton, Nathan Hunt, Subhro Das, Nghia Hoang. Formal Verification of End-to-End Learning in Cyber-Physical Systems: Progress and Challenges. NeurIPS-2019 Workshop on Safety and Robustness in Decision Making, Vancouver, BC, CA.
  * Nathan Fulton and André Platzer. [Verifiably Safe Off-Model Reinforcement Learning](https://arxiv.org/abs/1902.05632). Tools and Algorithms for the Construction and Analysis of Systems (TACAS’19), Held as part of the European Joint Conferences on Theory and Practice of Software (ETAPS’19).
  * Nathan Fulton and André Platzer. [Safe AI for CPS](https://ieeexplore.ieee.org/document/8624774). International Test Conference, ITC’18.
