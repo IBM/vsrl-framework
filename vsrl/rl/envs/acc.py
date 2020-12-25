@@ -98,6 +98,9 @@ class ACC(Env):
             vector_obs_bounds=vector_obs_bounds,
         )
 
+        self.action_space = self._make_action_space()
+
+
         # graphics
         self._init_state = np.array(
             [
