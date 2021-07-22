@@ -31,7 +31,9 @@ Getting these braking distance calculations right is non-trivial. Getting safety
 
 ### Installation
 
-If you want to run your models on GPUs, first follow the [PyTorch installation guide] to get the correct version of PyTorch for your CUDA version (otherwise, our dependencies include a CPU-only version).
+If you want to run your models on GPUs, first follow the [PyTorch installation guide](https://pytorch.org/get-started/locally/)
+ to get the correct version of PyTorch for your CUDA version (otherwise, our dependencies include a CPU-only version).
+Then, install VSRL using pip:
 
 ```
 git clone https://github.com/IBM/vsrl-framework.git
@@ -126,18 +128,32 @@ Verification of constraints can be done using [KeYmaera X](https://github.com/Ls
 The following BibTeX provides a canonical citation for VSRL:
 
 ```
-@article{VSRL2020,
-  title={Verifiably Safe Exploration for End-to-End Reinforcement Learning},
-  author={Hunt, Nathan and Fulton, Nathan and Magliacane, Sara and Hoang, Nghia and Das, Subhro and Solar-Lezama, Armando},
-  journal={arXiv preprint arXiv:2007.01223},
-  year={2020}
+@inproceedings{DBLP:conf/hybrid/HuntFMHDS21,
+  author    = {Nathan Hunt and
+               Nathan Fulton and
+               Sara Magliacane and
+               Trong Nghia Hoang and
+               Subhro Das and
+               Armando Solar{-}Lezama},
+  editor    = {Sergiy Bogomolov and
+               Rapha{\"{e}}l M. Jungers},
+  title     = {Verifiably safe exploration for end-to-end reinforcement learning},
+  booktitle = {{HSCC} '21: 24th {ACM} International Conference on Hybrid Systems:
+               Computation and Control, Nashville, Tennessee, May 19-21, 2021},
+  pages     = {14:1--14:11},
+  publisher = {{ACM}},
+  year      = {2021},
+  url       = {https://doi.org/10.1145/3447928.3456653},
+  doi       = {10.1145/3447928.3456653},
+  timestamp = {Wed, 19 May 2021 15:10:46 +0200},
+  biburl    = {https://dblp.org/rec/conf/hybrid/HuntFMHDS21.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
-
 ```
 
 The main components of VSRL are additionally described in several papers:
 
- * Nathan Hunt, Nathan Fulton, Sara Magliacane, Nghia Hoang, Subhro Das, Armando Solar-Lezama. [Verifiably Safe Exploration for End-to-End Reinforcement Learning](https://arxiv.org/abs/2007.01223). To be presented at the 24th ACM International Conference on Hybrid Systems: Computation and Control (HSCC 2021).
+ * Nathan Hunt, Nathan Fulton, Sara Magliacane, Nghia Hoang, Subhro Das, Armando Solar-Lezama. [Verifiably Safe Exploration for End-to-End Reinforcement Learning](https://arxiv.org/abs/2007.01223). In Proceedings of the 24th ACM International Conference on Hybrid Systems: Computation and Control (HSCC 2021).
  * Nathan Fulton, Nathan Hunt, Subhro Das, Nghia Hoang. Formal Verification of End-to-End Learning in Cyber-Physical Systems: Progress and Challenges. NeurIPS-2019 Workshop on Safety and Robustness in Decision Making, Vancouver, BC, CA.
  * Nathan Fulton and André Platzer. [Verifiably Safe Off-Model Reinforcement Learning](https://arxiv.org/abs/1902.05632). Tools and Algorithms for the Construction and Analysis of Systems (TACAS’19), Held as part of the European Joint Conferences on Theory and Practice of Software (ETAPS’19).
  * Nathan Fulton and André Platzer. [Safe AI for CPS](https://ieeexplore.ieee.org/document/8624774). International Test Conference, ITC’18.
@@ -157,5 +173,3 @@ See license.txt for details.
 
  * [Issue Tracker](https://github.com/IBM/vsrl-framework/issues)
  * [Slack Channel](https://verifiablysaf-ost4334.slack.com)
-
-[PyTorch installation guide]: https://pytorch.org/get-started/locally/
