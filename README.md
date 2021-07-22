@@ -128,7 +128,7 @@ Verification of constraints can be done using [KeYmaera X](https://github.com/Ls
 The following BibTeX provides a canonical citation for VSRL:
 
 ```
-@inproceedings{DBLP:conf/hybrid/HuntFMHDS21,
+@inproceedings{VSRL,
   author    = {Nathan Hunt and
                Nathan Fulton and
                Sara Magliacane and
